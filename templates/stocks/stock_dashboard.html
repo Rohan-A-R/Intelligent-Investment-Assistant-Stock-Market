@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IIA Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">IIA</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Stocks</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container my-4">
+        <h1 class="text-center mb-4">Stock Data for {{ symbol }}</h1>
+        
+        <!-- Search Form -->
+        <form method="GET" class="mb-4">
+            <div class="input-group">
+                <input type="text" name="symbol" class="form-control" placeholder="Enter stock symbol (e.g., TSLA)" value="{{ symbol }}">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">{{ symbol }} Summary</h5>
+                <p class="card-text">Latest Close: {{ stock_prices.0.close_price|floatformat:2 }}</p>
+                <p class="card-text">Latest Volume: {{ stock_prices.0.volume }}</p>
+            </div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">{{ symbol }} Closing Prices</h5>
+                <canvas id="stockChart" height="100"></canvas>
+            </div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Fenwick Tree Analysis</h5>
+                <p class="card-text">Sum of Closing Prices (Indices {{ range_left }} to {{ range_right }}): {{ range_sum|floatformat:2 }}</p>
+            </div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">XGBoost Price Prediction</h5>
+                <p class="card-text">Predicted Next Close: ${{ predicted_price|floatformat:2 }}</p>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for price in stock_prices %}
+                    <tr>
+                        <td>{{ price.timestamp }}</td>
+                        <td>{{ price.open_price|floatformat:2 }}</td>
+                        <td>{{ price.high_price|floatformat:2 }}</td>
+                        <td>{{ price.low_price|floatformat:2 }}</td>
+                        <td>{{ price.close_price|floatformat:2 }}</td>
+                        <td>{{ price.volume }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        const chartData = {{ chart_data|safe }};
+        const ctx = document.getElementById('stockChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Close Price ($)',
+                    data: chartData.data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.1,
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: 'Time' } },
+                    y: { title: { display: true, text: 'Price ($)' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
