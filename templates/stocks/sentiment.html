@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis Dashboard - IIA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">IIA</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'stock_dashboard' %}">Stock Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'portfolio' %}">Portfolio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'sentiment_dashboard' %}">Sentiment Analysis</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container my-4">
+        <h1 class="text-center mb-4">Sentiment Analysis for {{ symbol }}</h1>
+        
+        <!-- Search Form -->
+        <form method="GET" class="mb-4">
+            <div class="input-group">
+                <input type="text" name="symbol" class="form-control" placeholder="Enter stock symbol (e.g., AAPL)" value="{{ symbol }}">
+                <button type="submit" class="btn btn-primary">Analyze</button>
+            </div>
+        </form>
+
+        <!-- Stock Details -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">{{ stock_details.name }} ({{ symbol }})</h5>
+                <p class="card-text">Current Price: ${{ stock_details.current_price|floatformat:2 }}</p>
+                <p class="card-text">Market Cap: ${{ stock_details.market_cap }}</p>
+                <p class="card-text">P/E Ratio: {{ stock_details.pe_ratio }}</p>
+                <p class="card-text">Dividend Yield: {{ stock_details.dividend_yield }}</p>
+                <p class="card-text">Revenue: ${{ stock_details.revenue }}</p>
+                <p class="card-text">Net Income: ${{ stock_details.net_income }}</p>
+            </div>
+        </div>
+
+        <!-- News Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Latest News for {{ symbol }}</h5>
+                <div class="news-section">
+                    <h3>Latest News</h3>
+                    {% if news_items %}
+                        <div class="news-list">
+                            {% for item in news_items %}
+                                <div class="news-item">
+                                    <h4><a href="{{ item.link }}" target="_blank">{{ item.title }}</a></h4>
+                                    <div class="news-meta">
+                                        <span class="news-source">{{ item.source }}</span>
+                                        <span class="news-date">{{ item.published_at|date:"M d, Y" }}</span>
+                                    </div>
+                                    {% if item.description %}
+                                        <p class="news-description">{{ item.description }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>No recent news available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Twitter Feedback -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Top Twitter Feedback for {{ symbol }}</h5>
+                {% if tweets %}
+                    <ul class="list-group">
+                        {% for tweet in tweets %}
+                            <li class="list-group-item">{{ tweet }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="card-text">No recent tweets found for {{ symbol }}.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sentiment Analysis Summary -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Sentiment Analysis Summary</h5>
+                <h6>Stock Summary:</h6>
+                <p class="card-text">{{ sentiment_data.summary }}</p>
+                <h6>Key News Points:</h6>
+                {% if sentiment_data.news_points %}
+                    <ul>
+                        {% for point in sentiment_data.news_points %}
+                            <li>{{ point }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No key news points available.</p>
+                {% endif %}
+                <h6>Sentiment Analysis:</h6>
+                <p class="card-text"><strong>Fundamentals:</strong> {{ sentiment_data.sentiment_fundamentals|capfirst }}</p>
+                <p class="card-text"><strong>News:</strong> {{ sentiment_data.sentiment_news|capfirst }}</p>
+                <p class="card-text"><strong>Tweets:</strong> {{ sentiment_data.sentiment_tweets|capfirst }}</p>
+                <p class="card-text"><strong>Overall Sentiment:</strong> {{ sentiment_data.overall_sentiment|capfirst }}</p>
+                <p class="card-text"><strong>Recommendation:</strong> {{ sentiment_data.recommendation }}</p>
+                <p class="card-text"><strong>Predicted Price:</strong> ${{ sentiment_data.predicted_price|floatformat:2 }}</p>
+            </div>
+        </div>
+
+        <!-- Recent Analyses -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Recent Analyses for {{ symbol }}</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date</th>
+                                <th>Summary</th>
+                                <th>Recommendation</th>
+                                <th>Predicted Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for analysis in recent_analyses %}
+                            <tr>
+                                <td>{{ analysis.analysis_date }}</td>
+                                <td>{{ analysis.summary }}</td>
+                                <td>{{ analysis.recommendation }}</td>
+                                <td>{{ analysis.predicted_price|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
