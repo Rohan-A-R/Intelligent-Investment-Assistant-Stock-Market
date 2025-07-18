@@ -19,4 +19,3 @@ REDDIT_USER_AGENT = 'your_reddit_user_agent_here'
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'your_google_oauth2_client_id_here'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'your_google_oauth2_client_secret_here'
 
-# Add other API keys here as needed
