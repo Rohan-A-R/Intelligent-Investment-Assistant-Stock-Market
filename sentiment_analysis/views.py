@@ -1,17 +1,19 @@
 import yfinance as yf
 import requests
 import json
+import praw
 from django.shortcuts import render
 from .models import SentimentAnalysis
 from google import generativeai as genai
-from google.generativeai import types 
+from google.generativeai import types
 from newsapi import NewsApiClient
 from datetime import datetime, timedelta
-from iia_Core.api_keys import GEMINI_API_KEY, NEWS_API_KEY
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+from iia_Core.api_keys import GEMINI_API_KEY, NEWS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
 
 def fetch_stock_data(symbol):
     stock = yf.Ticker(symbol)
-    # Fetch stock fundamentals
     info = stock.info
     stock_details = {
         'name': info.get('longName', 'N/A'),
@@ -26,18 +28,11 @@ def fetch_stock_data(symbol):
 
 def fetch_news(symbol):
     try:
-        # Initialize NewsAPI client
         newsapi = NewsApiClient(api_key=NEWS_API_KEY)
-        
-        # Calculate date range (last 7 days)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
-        
-        # Format dates for NewsAPI
         from_date = start_date.strftime('%Y-%m-%d')
         to_date = end_date.strftime('%Y-%m-%d')
-        
-        # Fetch news articles
         news = newsapi.get_everything(
             q=symbol,
             from_param=from_date,
@@ -46,8 +41,6 @@ def fetch_news(symbol):
             sort_by='relevancy',
             page_size=5
         )
-        
-        # Process news articles
         news_items = []
         for article in news.get('articles', []):
             if article.get('title') and article.get('url'):
@@ -58,18 +51,55 @@ def fetch_news(symbol):
                     'published_at': article.get('publishedAt'),
                     'description': article.get('description', '')
                 })
-        
         return news_items
     except Exception as e:
         print(f"Error fetching news: {e}")
         return []
 
-def get_gemini_sentiment(stock_details, news_items, tweets):
-    # Configure the Gemini client
+def fetch_reddit_data(symbol):
+    try:
+        reddit = praw.Reddit(
+            client_id=REDDIT_CLIENT_ID,
+            client_secret=REDDIT_CLIENT_SECRET,
+            user_agent=REDDIT_USER_AGENT
+        )
+        analyzer = SentimentIntensityAnalyzer()
+
+        subreddits = ['stocks', 'wallstreetbets', 'investing']
+        reddit_posts = []
+
+        for subreddit_name in subreddits:
+            subreddit = reddit.subreddit(subreddit_name)
+            for submission in subreddit.search(symbol, limit=3):
+                title = submission.title or ""
+                selftext = submission.selftext or ""
+                combined_text = f"{title} {selftext}".strip()
+                sentiment_score = analyzer.polarity_scores(combined_text)['compound']
+
+                sentiment_label = (
+                    'positive' if sentiment_score > 0.05 else
+                    'negative' if sentiment_score < -0.05 else
+                    'neutral'
+                )
+
+                reddit_posts.append({
+                    'title': title,
+                    'url': submission.url,
+                    'selftext': selftext,
+                    'subreddit': subreddit_name,
+                    'sentiment': sentiment_label,
+                    'sentiment_score': round(sentiment_score, 3)
+                })
+
+        return reddit_posts
+    except Exception as e:
+        print(f"Error fetching Reddit data: {e}")
+        return []
+
+
+def get_gemini_sentiment(stock_details, news_items, reddit_posts):
     client = genai.GenerativeModel('gemini-2.0-flash')
     genai.configure(api_key=GEMINI_API_KEY)
-
-    # Format news items for better analysis
     formatted_news = []
     for item in news_items:
         formatted_news.append({
@@ -79,53 +109,69 @@ def get_gemini_sentiment(stock_details, news_items, tweets):
             'published_at': item['published_at']
         })
 
+    formatted_reddit = []
+    for post in reddit_posts:
+        formatted_reddit.append({
+            'title': post['title'],
+            'subreddit': post['subreddit'],
+            'text': post['selftext']
+        })
+
     prompt = f"""
-    Analyze the following stock data and news for the stock symbol provided.
+    Analyze the following stock data, news, and Reddit posts for the stock symbol provided.
     Stock Fundamentals: {json.dumps(stock_details)}
     News: {json.dumps(formatted_news)}
-    
+    Reddit Posts: {json.dumps(formatted_reddit)}
+
     Provide a structured response with:
     1. A summary of the stock (2-3 sentences describing its current state).
     2. 3-4 key points summarizing the news (bullet points).
-    3. Sentiment analysis for:
+    3. 3-4 key points summarizing the Reddit posts (bullet points).
+    4. Sentiment analysis for:
        - Stock fundamentals (positive, negative, neutral).
        - News (positive, negative, neutral).
-    4. An overall sentiment (positive, negative, neutral).
-    5. A stock recommendation (Buy, Sell, Hold).
-    6. A predicted stock price based on the sentiment and data.
+       - Reddit (positive, negative, neutral).
+    5. An overall sentiment (positive, negative, neutral).
+    6. A stock recommendation (Buy, Sell, Hold).
+    7. A predicted stock price based on the sentiment and data.
     """
 
     try:
         response = client.generate_content(
             contents=[prompt],
             generation_config=types.GenerationConfig(
-                max_output_tokens=700,
+                max_output_tokens=1000,
                 temperature=0.7
             )
         )
         raw_summary = response.text
-        
-        # Parse the structured response
+
         summary = "No summary available."
         news_points = []
+        reddit_points = []
         sentiment_fundamentals = "neutral"
         sentiment_news = "neutral"
+        sentiment_reddit = "neutral"
         overall_sentiment = "neutral"
         recommendation = "Hold"
         predicted_price = stock_details['current_price']
 
-        # Extract sections using simple text parsing
         if "Stock Summary:" in raw_summary:
             summary = raw_summary.split("Stock Summary:")[1].split("News Points:")[0].strip()
         if "News Points:" in raw_summary:
-            news_section = raw_summary.split("News Points:")[1].split("Sentiment Analysis:")[0].strip()
+            news_section = raw_summary.split("News Points:")[1].split("Reddit Points:")[0].strip()
             news_points = [point.strip() for point in news_section.split("\n") if point.strip().startswith("-")][:4]
+        if "Reddit Points:" in raw_summary:
+            reddit_section = raw_summary.split("Reddit Points:")[1].split("Sentiment Analysis:")[0].strip()
+            reddit_points = [point.strip() for point in reddit_section.split("\n") if point.strip().startswith("-")][:4]
         if "Sentiment Analysis:" in raw_summary:
             sentiment_section = raw_summary.split("Sentiment Analysis:")[1].split("Overall Sentiment:")[0].strip()
             if "Fundamentals:" in sentiment_section:
                 sentiment_fundamentals = sentiment_section.split("Fundamentals:")[1].split("\n")[0].strip().lower()
             if "News:" in sentiment_section:
                 sentiment_news = sentiment_section.split("News:")[1].split("\n")[0].strip().lower()
+            if "Reddit:" in sentiment_section:
+                sentiment_reddit = sentiment_section.split("Reddit:")[1].split("\n")[0].strip().lower()
         if "Overall Sentiment:" in raw_summary:
             overall_sentiment = raw_summary.split("Overall Sentiment:")[1].split("Recommendation:")[0].strip().lower()
         if "Recommendation:" in raw_summary:
@@ -139,8 +185,10 @@ def get_gemini_sentiment(stock_details, news_items, tweets):
         return {
             'summary': summary,
             'news_points': news_points,
+            'reddit_points': reddit_points,
             'sentiment_fundamentals': sentiment_fundamentals,
             'sentiment_news': sentiment_news,
+            'sentiment_reddit': sentiment_reddit,
             'overall_sentiment': overall_sentiment,
             'recommendation': recommendation,
             'predicted_price': predicted_price
@@ -150,8 +198,10 @@ def get_gemini_sentiment(stock_details, news_items, tweets):
         return {
             'summary': 'Error in Gemini API',
             'news_points': [],
+            'reddit_points': [],
             'sentiment_fundamentals': 'neutral',
             'sentiment_news': 'neutral',
+            'sentiment_reddit': 'neutral',
             'overall_sentiment': 'neutral',
             'recommendation': 'Hold',
             'predicted_price': stock_details['current_price']
@@ -159,29 +209,31 @@ def get_gemini_sentiment(stock_details, news_items, tweets):
 
 def sentiment_dashboard(request):
     symbol = request.GET.get('symbol', 'AAPL').upper()
-    # Fetch data
     stock_details = fetch_stock_data(symbol)
     news_items = fetch_news(symbol)
-    
-    # Get sentiment from Gemini API
-    sentiment_data = get_gemini_sentiment(stock_details, news_items, [])
-    
-    # Save to database
+    reddit_posts = fetch_reddit_data(symbol)
+
+    sentiment_data = get_gemini_sentiment(stock_details, news_items, reddit_posts)
+
     SentimentAnalysis.objects.create(
         symbol=symbol,
         summary=sentiment_data['summary'],
         recommendation=sentiment_data['recommendation'],
         predicted_price=sentiment_data['predicted_price']
     )
-    
-    # Fetch recent analyses
+
     recent_analyses = SentimentAnalysis.objects.filter(symbol=symbol).order_by('-analysis_date')[:5]
-    
+
     context = {
         'symbol': symbol,
         'stock_details': stock_details,
         'news_items': news_items,
+        'reddit_posts': reddit_posts,
         'sentiment_data': sentiment_data,
         'recent_analyses': recent_analyses,
     }
     return render(request, 'stocks/sentiment.html', context)
+
+def some_view(request):
+    # Your view logic here
+    pass

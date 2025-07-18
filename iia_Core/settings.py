@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import os
 from .api_keys import SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -22,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'your-secret-key-here')
+SECRET_KEY = 'django-insecure-x+muavw&%4lu=3^8phte(i=1m3s(j6x6*bm)m93b#=oh#q(4^6'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -83,11 +82,11 @@ WSGI_APPLICATION = 'iia_Core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'iia_db'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'NAME': 'iia_db',  
+        'USER': 'postgres', 
+        'PASSWORD': 'Rohan@2002',  
+        'HOST': 'localhost',  
+        'PORT': '5432',  
     }
 }
 
