@@ -9,6 +9,7 @@ from google.generativeai import types
 from newsapi import NewsApiClient
 from datetime import datetime, timedelta
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from django.core.cache import cache
 
 from iia_Core.api_keys import GEMINI_API_KEY, NEWS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
 
@@ -27,6 +28,11 @@ def fetch_stock_data(symbol):
     return stock_details
 
 def fetch_news(symbol):
+    cache_key = f"news_{symbol}"
+    cached_news = cache.get(cache_key)
+    if cached_news:
+        return cached_news
+
     try:
         newsapi = NewsApiClient(api_key=NEWS_API_KEY)
         end_date = datetime.now()
@@ -51,12 +57,19 @@ def fetch_news(symbol):
                     'published_at': article.get('publishedAt'),
                     'description': article.get('description', '')
                 })
+        
+        cache.set(cache_key, news_items, timeout=3600)  # Cache for 1 hour
         return news_items
     except Exception as e:
         print(f"Error fetching news: {e}")
         return []
 
 def fetch_reddit_data(symbol):
+    cache_key = f"reddit_{symbol}"
+    cached_reddit_data = cache.get(cache_key)
+    if cached_reddit_data:
+        return cached_reddit_data
+
     try:
         reddit = praw.Reddit(
             client_id=REDDIT_CLIENT_ID,
@@ -91,6 +104,7 @@ def fetch_reddit_data(symbol):
                     'sentiment_score': round(sentiment_score, 3)
                 })
 
+        cache.set(cache_key, reddit_posts, timeout=3600)  # Cache for 1 hour
         return reddit_posts
     except Exception as e:
         print(f"Error fetching Reddit data: {e}")
