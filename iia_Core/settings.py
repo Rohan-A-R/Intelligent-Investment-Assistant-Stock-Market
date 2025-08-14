@@ -14,7 +14,6 @@ import os
 import dj_database_url
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
-from .api_keys import SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -164,8 +163,8 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/portfolio/'  # Redirect to portfolio after login
 LOGOUT_REDIRECT_URL = '/login/'
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET)
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 REDDIT_CLIENT_ID = os.environ.get('REDDIT_CLIENT_ID')
