@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from django.core.cache import cache
 
-from iia_Core.api_keys import GEMINI_API_KEY, NEWS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
+from iia_Core.settings import GEMINI_API_KEY, NEWS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
 
 def fetch_stock_data(symbol):
     stock = yf.Ticker(symbol)
