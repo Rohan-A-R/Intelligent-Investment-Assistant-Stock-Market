@@ -36,7 +36,7 @@ jobs:
 
       - name: Test DB connection
         run: |
-          python -c "import os, psycopg2; psycopg2.connect(os.environ['DATABASE_URL'])"
+          python -c "import os, psycopg2; psycopg2.connect(os.environ['DATABASE_URL'].strip())"
         # This will fail early if DB credentials or firewall are incorrect
 
       - name: Collect static files
