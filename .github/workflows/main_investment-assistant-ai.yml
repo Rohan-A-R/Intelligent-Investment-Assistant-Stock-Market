@@ -3,7 +3,7 @@ name: Deploy Django App to Azure
 on:
   push:
     branches:
-      - main   # deploys when you push to main
+      - main
   workflow_dispatch:
 
 jobs:
@@ -34,6 +34,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Test DB connection
+        run: |
+          python -c "import os, psycopg2; psycopg2.connect(os.environ['DATABASE_URL'])"
+        # This will fail early if DB credentials or firewall are incorrect
+
       - name: Collect static files
         run: python manage.py collectstatic --noinput
 
@@ -43,7 +48,7 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: investment-assistant-ai-d3g2h3enevc6cccf  # full Azure domain app name
+          app-name: investment-assistant-ai-d3g2h3enevc6cccf
           slot-name: production
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          start-up-command: gunicorn iia_Core.wsgi --bind 0.0.0.0 --timeout 600
+          start-up-command: gunicorn iia_Core.wsgi:application --bind 0.0.0.0 --timeout 600
