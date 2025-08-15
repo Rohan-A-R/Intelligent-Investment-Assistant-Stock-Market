@@ -1,0 +1,54 @@
+trigger:
+- main
+
+variables:
+  azureSubscription: 'YOUR_AZURE_SUBSCRIPTION'
+  webAppName: 'YOUR_WEB_APP_NAME'
+  environmentName: 'production'
+  projectRoot: $(System.DefaultWorkingDirectory)
+
+stages:
+- stage: Build
+  displayName: Build and Deploy
+  jobs:
+  - job: Build
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.10'
+      displayName: 'Use Python 3.10'
+
+    - script: |
+        python -m venv env
+        source env/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: |
+        source env/bin/activate
+        python manage.py collectstatic --noinput
+        python manage.py migrate --noinput
+      displayName: 'Collect static & Migrate DB'
+      env:
+        DATABASE_URL: $(DATABASE_URL)
+        SECRET_KEY: $(SECRET_KEY)
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.SourcesDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Archive files'
+
+    - task: AzureWebApp@1
+      inputs:
+        azureSubscription: '$(azureSubscription)'
+        appName: '$(webAppName)'
+        package: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+        deploymentMethod: 'zip'
