@@ -33,7 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # --- Use SQLite for CI/CD testing to avoid DB connection errors ---
+      # Use SQLite for CI/CD testing to avoid DB connection errors
       - name: Configure SQLite for testing
         run: |
           echo "DATABASE_URL=sqlite:///$(pwd)/db.sqlite3" >> $GITHUB_ENV
@@ -50,4 +50,4 @@ jobs:
           app-name: investment-assistant-ai-d3g2h3enevc6cccf
           slot-name: production
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          start-up-command: gunicorn iia_Core.wsgi:application --bind 0.0.0.0 --timeout 600
+          startup-command: gunicorn iia_Core.wsgi:application --bind 0.0.0.0 --timeout 600
