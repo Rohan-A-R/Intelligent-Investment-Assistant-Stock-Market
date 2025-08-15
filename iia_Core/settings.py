@@ -89,21 +89,9 @@ WSGI_APPLICATION = 'iia_Core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-if 'DATABASE_URL' in os.environ:
-    DATABASES = {
-        'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'iia_db',
-            'USER': 'postgres',
-            'PASSWORD': 'Rohan@2002',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+DATABASES = {
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'), conn_max_age=600)
+}
 
 
 CACHES = {
