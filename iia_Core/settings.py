@@ -30,7 +30,11 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['investment-assistant-ai.azurewebsites.net', '127.0.0.1'] # Add your custom domain if you have one
+ALLOWED_HOSTS = [
+    'investment-assistant-ai.azurewebsites.net',          # optional, your shorter name
+    'investment-assistant-ai-d3g2h3enevc6cccf.azurewebsites.net',  # full auto-generated URL
+    '127.0.0.1'
+]
 
 
 # Application definition
